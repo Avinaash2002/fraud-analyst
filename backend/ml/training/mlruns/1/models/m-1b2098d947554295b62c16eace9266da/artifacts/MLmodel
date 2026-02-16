@@ -1,0 +1,23 @@
+artifact_path: file:///C:/Users/naash/Documents/programming/fraud-analyst/backend/ml/training/mlruns/1/models/m-1b2098d947554295b62c16eace9266da/artifacts
+flavors:
+  lightgbm:
+    code: null
+    data: model.pkl
+    lgb_version: 4.6.0
+    model_class: lightgbm.sklearn.LGBMClassifier
+    serialization_format: cloudpickle
+    skops_trusted_types: null
+  python_function:
+    data: model.pkl
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.lightgbm
+    python_version: 3.11.9
+mlflow_version: 3.9.0
+model_id: m-1b2098d947554295b62c16eace9266da
+model_size_bytes: 1066486
+model_uuid: m-1b2098d947554295b62c16eace9266da
+prompts: null
+run_id: f9487892b49f4377b9f3701b0ecfc264
+utc_time_created: '2026-02-16 05:37:21.609965'

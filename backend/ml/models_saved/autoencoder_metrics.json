@@ -1,0 +1,19 @@
+{
+  "accuracy": 0.9982,
+  "precision": 0.4711,
+  "recall": 0.5816,
+  "f1_score": 0.5205,
+  "auc_roc": 0.9482,
+  "model_name": "Autoencoder",
+  "algorithm_type": "unsupervised",
+  "architecture": "Dense(30)\u2192Dense(32)\u2192Dense(16)\u2192Dense(8)\u2192Dense(16)\u2192Dense(32)\u2192Dense(30)",
+  "training_time": 311.56,
+  "threshold": 5.2412687789625565,
+  "threshold_f1": 0.5205479452054794,
+  "threshold_precision": 0.47107438016528924,
+  "threshold_recall": 0.5816326530612245,
+  "threshold_method": "balanced_f1_optimization",
+  "error_metric": "combined(0.5*MSE+0.3*MAE+0.2*MaxErr)",
+  "total_parameters": 3334,
+  "mlflow_run_id": "d43296bdab8746f2be788316701c8b28"
+}

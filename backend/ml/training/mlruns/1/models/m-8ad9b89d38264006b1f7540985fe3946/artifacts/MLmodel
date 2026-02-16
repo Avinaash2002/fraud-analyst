@@ -1,0 +1,22 @@
+artifact_path: file:///C:/Users/naash/Documents/programming/fraud-analyst/backend/ml/training/mlruns/1/models/m-8ad9b89d38264006b1f7540985fe3946/artifacts
+flavors:
+  python_function:
+    data: model.ubj
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.xgboost
+    python_version: 3.11.9
+  xgboost:
+    code: null
+    data: model.ubj
+    model_class: xgboost.sklearn.XGBClassifier
+    model_format: ubj
+    xgb_version: 3.2.0
+mlflow_version: 3.9.0
+model_id: m-8ad9b89d38264006b1f7540985fe3946
+model_size_bytes: 1015977
+model_uuid: m-8ad9b89d38264006b1f7540985fe3946
+prompts: null
+run_id: ebe5728d043b45ee8493b3e9cc9a8fa5
+utc_time_created: '2026-02-16 05:36:50.041169'
