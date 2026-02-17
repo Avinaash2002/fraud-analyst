@@ -126,7 +126,7 @@ def get_embedding(text: str) -> List[float]:
     """
     try:
         response = client.models.embed_content(
-            model    = "models/text-embedding-004",
+            model    = "models/gemini-embedding-001",
             contents = text,
         )
         return response.embeddings[0].values
