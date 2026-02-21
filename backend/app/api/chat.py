@@ -16,7 +16,7 @@ import os, json
 from dotenv import load_dotenv
 
 from app.models import ChatRequest, ChatResponse, SimulationHistory
-from app.database import get_db
+from app.database import get_db, ensure_device
 from app.services.gemini_service import chat_response
 
 load_dotenv()
@@ -101,6 +101,9 @@ async def chat(request: ChatRequest, db: AsyncSession = Depends(get_db)):
     3. Answer agent   → Gemini generates final answer with context
     """
 
+    # ── Auto-register device ─────────────────────────────────────────────────
+    await ensure_device(db, request.device_id)
+
     # ── Agent 1: Get simulation context if simulation_id provided ─────────────
     simulation_context = None
     if request.simulation_id:
@@ -135,6 +138,7 @@ async def chat(request: ChatRequest, db: AsyncSession = Depends(get_db)):
         user_message       = request.message,
         context_docs       = context_docs,
         simulation_context = simulation_context,
+        chat_history       = request.chat_history,
     )
 
     return ChatResponse(

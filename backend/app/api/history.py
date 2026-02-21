@@ -14,7 +14,7 @@ from typing import Optional
 import json
 
 from app.models import SimulationHistory
-from app.database import get_db
+from app.database import get_db, ensure_device
 
 router = APIRouter()
 
@@ -29,6 +29,8 @@ async def get_history(
     """
     Returns simulation history for a specific device, newest first.
     """
+    await ensure_device(db, device_id)
+
     result = await db.execute(
         select(SimulationHistory)
         .where(SimulationHistory.device_id == device_id)

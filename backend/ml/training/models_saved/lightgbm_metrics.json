@@ -1,0 +1,44 @@
+{
+  "accuracy": 0.9995,
+  "precision": 0.8732,
+  "recall": 0.8378,
+  "f1_score": 0.8552,
+  "auc_roc": 0.966,
+  "pr_auc": 0.8469,
+  "true_negatives": 42639,
+  "false_positives": 9,
+  "false_negatives": 12,
+  "true_positives": 62,
+  "support_normal": 42648,
+  "support_fraud": 74,
+  "model_name": "LightGBM",
+  "algorithm_type": "supervised",
+  "training_time": 685.98,
+  "class_weight": {
+    "0": 1,
+    "1": 578.55
+  },
+  "optuna_trials": 50,
+  "validation_f1_best": 0.8613,
+  "best_params": {
+    "n_estimators": 426,
+    "max_depth": 9,
+    "learning_rate": 0.046690820996424506,
+    "subsample": 0.8743975829789056,
+    "colsample_bytree": 0.8313183276871022,
+    "min_child_samples": 48,
+    "num_leaves": 39,
+    "reg_alpha": 1.0937323252318478,
+    "reg_lambda": 0.38274258473558087,
+    "class_weight": {
+      "0": 1,
+      "1": 578.55
+    },
+    "random_state": 42,
+    "n_jobs": -1,
+    "verbose": -1
+  },
+  "data_split": "train_70_val_15_test_15",
+  "no_data_leakage": true,
+  "mlflow_run_id": "e5cce575b7ea4cdcabf113fc755c9558"
+}

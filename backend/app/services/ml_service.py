@@ -130,11 +130,17 @@ def predict(model_name: str, X: np.ndarray) -> Tuple[str, float, float]:
 
     elif model_name == "Autoencoder":
         recon       = model.predict(X, verbose=0)
-        mse         = float(np.mean(np.power(X - recon, 2)))
+        # MUST match the combined metric used during training threshold selection
+        # (see train_autoencoder.py → compute_reconstruction_errors)
+        mse_arr     = np.mean(np.power(X - recon, 2), axis=1)
+        mae_arr     = np.mean(np.abs(X - recon), axis=1)
+        max_err_arr = np.max(np.abs(X - recon), axis=1)
+        combined    = float((0.5 * mse_arr + 0.3 * mae_arr + 0.2 * max_err_arr)[0])
+
         threshold   = _meta.get("autoencoder_threshold", 0.5)
-        prediction  = "FRAUD" if mse > threshold else "NORMAL"
-        # Normalize MSE to 0-1 range for risk score
-        risk_score  = min(mse / (threshold * 3), 1.0)
+        prediction  = "FRAUD" if combined > threshold else "NORMAL"
+        # Normalize combined error to 0-1 range for risk score
+        risk_score  = min(combined / (threshold * 3), 1.0)
         confidence  = risk_score if prediction == "FRAUD" else 1 - risk_score
 
     else:

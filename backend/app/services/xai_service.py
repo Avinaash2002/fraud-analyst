@@ -48,7 +48,11 @@ def get_shap_explanation(model_name: str, X: np.ndarray, top_n: int = 10) -> Lis
         return results[:top_n]
 
     elif model_name == "Autoencoder":
-        # For Autoencoder: impact = how much each feature contributes to reconstruction error
+        # For Autoencoder: per-feature squared reconstruction error shows
+        # which features the model struggled most to reconstruct (anomalous features).
+        # Note: the overall prediction threshold uses a combined metric
+        # (0.5*MSE + 0.3*MAE + 0.2*MaxErr), but for feature-level attribution,
+        # squared error per feature is the most interpretable breakdown.
         model  = get_model("Autoencoder")
         recon  = model.predict(X, verbose=0)
         errors = np.power(X - recon, 2)[0]

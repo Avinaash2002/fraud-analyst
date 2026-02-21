@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.models import PredictRequest, PredictResponse, SimulationHistory, MLModel
-from app.database import get_db
+from app.database import get_db, ensure_device
 from app.services.ml_service import preprocess_input, predict, load_all_models, get_model
 from app.services.xai_service import get_top_features, get_shap_explanation
 from app.services.gemini_service import explain_prediction
@@ -87,8 +87,9 @@ async def predict_fraud(request: PredictRequest, db: AsyncSession = Depends(get_
     except Exception:
         pass    # model_id stays None if not found — non-critical
 
-    # 7. Save to Supabase
+    # 7. Auto-register device + save to Supabase
     try:
+        await ensure_device(db, request.device_id)
         record = SimulationHistory(
             simulation_id      = simulation_id,
             device_id          = request.device_id,

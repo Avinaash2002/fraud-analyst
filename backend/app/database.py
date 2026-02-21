@@ -56,5 +56,33 @@ async def create_tables():
     """
     async with engine.begin() as conn:
         # Import here to avoid circular imports
-        from app.models import MLModel, Dataset, SimulationHistory, KnowledgeBase
+        from app.models import User, MLModel, Dataset, SimulationHistory, KnowledgeBase
         await conn.run_sync(Base.metadata.create_all)
+
+
+# ── Auto-register device (lazy registration) ─────────────────────────────────
+async def ensure_device(db, device_id: str):
+    """
+    Creates a User row if this device_id hasn't been seen before.
+    Updates last_active timestamp on every call.
+    Called automatically by predict, history, and chat endpoints.
+    """
+    if not device_id:
+        return
+
+    from app.models import User
+    from datetime import datetime
+    from sqlalchemy import select
+
+    result = await db.execute(select(User).where(User.device_id == device_id))
+    user = result.scalar_one_or_none()
+
+    if user:
+        user.last_active = datetime.utcnow()
+    else:
+        db.add(User(device_id=device_id))
+
+    try:
+        await db.commit()
+    except Exception:
+        await db.rollback()

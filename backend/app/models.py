@@ -19,6 +19,14 @@ from app.database import Base
 #  SQLAlchemy Models (Database Tables)
 # ══════════════════════════════════════════════════════════════════════════════
 
+class User(Base):
+    __tablename__ = "users"
+
+    device_id      = Column(String(25), primary_key=True)
+    last_active    = Column(DateTime, default=datetime.utcnow)
+    app_version    = Column(String(5), default="1.0.0")
+    account_amount = Column(Float, default=0)
+
 class Dataset(Base):
     __tablename__ = "datasets"
 
@@ -60,7 +68,7 @@ class SimulationHistory(Base):
     __tablename__ = "simulation_history"
 
     simulation_id     = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    device_id         = Column(String(255))
+    device_id         = Column(String(25), ForeignKey("users.device_id"))
     model_id          = Column(UUID(as_uuid=True), ForeignKey("ml_models.model_id"), nullable=True)
     timestamp         = Column(DateTime, default=datetime.utcnow)
     transaction_amount= Column(Float)
@@ -181,6 +189,7 @@ class ChatRequest(BaseModel):
     message           : str
     device_id         : Optional[str] = None
     simulation_id     : Optional[str] = None   # attach a simulation result to the query
+    chat_history      : Optional[List[dict]] = None  # [{"role": "user"|"assistant", "content": "..."}]
 
 
 class ChatResponse(BaseModel):

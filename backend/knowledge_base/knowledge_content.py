@@ -472,4 +472,360 @@ Given the class imbalance ratio, we recommend measuring the accuracy using the A
 matrix accuracy is not meaningful for unbalanced classification.
 """
     },
+    {
+        "title": "How Evaluation Metrics Are Calculated",
+        "category": "metrics",
+        "content": """
+Evaluation metrics are mathematical formulas used to measure how well a fraud detection model
+performs. In FraudX Analyst, we use five core metrics. Each is calculated from the confusion
+matrix, which contains four values: True Positives (TP), True Negatives (TN), False Positives (FP),
+and False Negatives (FN).
+
+Accuracy
+Accuracy = (TP + TN) / (TP + TN + FP + FN)
+It measures the overall proportion of correct predictions out of all predictions. In fraud
+detection, accuracy can be misleading because the dataset is highly imbalanced (99.83% normal,
+0.17% fraud). A model that predicts everything as normal would still achieve 99.83% accuracy
+while catching zero fraud. This is why we rely on additional metrics.
+
+Reference: Hossin, M. and Sulaiman, M.N. (2015). A Review on Evaluation Metrics for Data
+Classification Evaluations. International Journal of Data Mining and Knowledge Management
+Process, 5(2), pp.1-11.
+
+Precision
+Precision = TP / (TP + FP)
+Precision answers: "Of all transactions the model flagged as fraud, how many were actually fraud?"
+High precision means fewer false alarms. In banking, low precision leads to too many legitimate
+transactions being blocked, frustrating customers.
+
+Recall (Sensitivity / True Positive Rate)
+Recall = TP / (TP + FN)
+Recall answers: "Of all actual fraud transactions, how many did the model catch?"
+High recall means fewer missed fraud cases. In fraud detection, recall is often prioritized
+because missing a fraud case (false negative) causes direct financial loss.
+
+F1 Score
+F1 = 2 * (Precision * Recall) / (Precision + Recall)
+The F1 Score is the harmonic mean of precision and recall. It provides a single balanced metric
+that accounts for both false positives and false negatives. F1 ranges from 0 (worst) to 1 (best).
+We use F1 Score as the primary optimization metric in FraudX because it balances the tradeoff
+between catching fraud (recall) and avoiding false alarms (precision).
+
+Reference: Powers, D.M.W. (2011). Evaluation: From Precision, Recall and F-Measure to ROC,
+Informedness, Markedness and Correlation. Journal of Machine Learning Technologies, 2(1), pp.37-63.
+
+AUC-ROC (Area Under the Receiver Operating Characteristic Curve)
+AUC-ROC measures the model's ability to discriminate between fraud and normal transactions across
+all possible classification thresholds. It plots the True Positive Rate (recall) against the
+False Positive Rate (FPR = FP / (FP + TN)) at various thresholds.
+AUC = 1.0 means perfect discrimination; AUC = 0.5 means no better than random guessing.
+AUC-ROC is threshold-independent, making it useful for comparing models overall.
+
+Reference: Fawcett, T. (2006). An Introduction to ROC Analysis. Pattern Recognition Letters,
+27(8), pp.861-874.
+
+PR-AUC (Area Under the Precision-Recall Curve)
+PR-AUC is especially suitable for imbalanced datasets like ours. It plots precision against recall
+at various thresholds. Unlike ROC-AUC, PR-AUC focuses on the positive (fraud) class performance
+and is not inflated by the large number of true negatives. FraudX reports PR-AUC alongside
+AUC-ROC for a complete picture.
+
+Reference: Saito, T. and Rehmsmeier, M. (2015). The Precision-Recall Plot Is More Informative
+than the ROC Plot When Evaluating Binary Classifiers on Imbalanced Datasets. PLoS ONE, 10(3),
+e0118432.
+"""
+    },
+    {
+        "title": "How the XGBoost Model Was Built in FraudX",
+        "category": "model_building",
+        "content": """
+XGBoost (Extreme Gradient Boosting) is a supervised learning algorithm used in FraudX Analyst
+for binary classification of transactions as fraud or normal.
+
+Algorithm Overview
+XGBoost is an ensemble method that builds many decision trees sequentially. Each new tree
+corrects the errors of the previous ones using gradient descent optimization. The final
+prediction is the weighted sum of all tree predictions. XGBoost uses second-order gradient
+approximations (Newton-Raphson) for faster convergence compared to standard gradient boosting.
+
+Reference: Chen, T. and Guestrin, C. (2016). XGBoost: A Scalable Tree Boosting System.
+Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data
+Mining, pp.785-794.
+
+Data Preparation
+The Kaggle Credit Card Fraud dataset (284,807 transactions, 492 fraud) was split into:
+- Training set: 70% (used to train the model)
+- Validation set: 15% (used for hyperparameter tuning with Optuna)
+- Test set: 15% (used ONCE for final evaluation, never seen during training)
+Scalers were fit ONLY on the training set and then applied to validation and test sets
+to prevent data leakage.
+
+Handling Class Imbalance
+XGBoost uses the scale_pos_weight parameter, calculated as the ratio of normal to fraud
+samples in the training set (approximately 578:1). This makes the model penalize missed
+fraud cases much more heavily than missed normal cases.
+
+Hyperparameter Tuning
+Optuna (a Bayesian optimization framework) was used to search for optimal hyperparameters
+over 50 trials, evaluating on the validation set only. Key hyperparameters tuned:
+- n_estimators: number of boosting rounds (100-500)
+- max_depth: maximum tree depth (3-9)
+- learning_rate: step size shrinkage (0.01-0.3, log scale)
+- subsample: fraction of training data per tree (0.6-1.0)
+- colsample_bytree: fraction of features per tree (0.6-1.0)
+- min_child_weight: minimum sum of instance weight in a child (1-10)
+- gamma: minimum loss reduction for a split (0-5)
+- reg_alpha: L1 regularization (0-2)
+- reg_lambda: L2 regularization (0-2)
+
+Reference: Akiba, T. et al. (2019). Optuna: A Next-Generation Hyperparameter Optimization
+Framework. Proceedings of the 25th ACM SIGKDD International Conference on Knowledge Discovery
+and Data Mining, pp.2623-2631.
+
+Explainability
+After training, SHAP (SHapley Additive exPlanations) TreeExplainer was applied to compute
+feature importance values for individual predictions. This enables FraudX to explain why
+each transaction was flagged or cleared.
+
+Reference: Lundberg, S.M. and Lee, S.I. (2017). A Unified Approach to Interpreting Model
+Predictions. Advances in Neural Information Processing Systems 30 (NeurIPS), pp.4765-4774.
+"""
+    },
+    {
+        "title": "How the LightGBM Model Was Built in FraudX",
+        "category": "model_building",
+        "content": """
+LightGBM (Light Gradient Boosting Machine) is a supervised learning algorithm used in FraudX
+Analyst as the second gradient boosting model alongside XGBoost.
+
+Algorithm Overview
+LightGBM is a gradient boosting framework developed by Microsoft that uses two novel techniques:
+Gradient-based One-Side Sampling (GOSS) which focuses on training instances with larger gradients,
+and Exclusive Feature Bundling (EFB) which bundles mutually exclusive features together.
+These make LightGBM significantly faster than traditional gradient boosting while maintaining
+accuracy. LightGBM also grows trees leaf-wise (best-first) rather than level-wise, which
+often produces deeper but more accurate trees.
+
+Reference: Ke, G. et al. (2017). LightGBM: A Highly Efficient Gradient Boosting Decision Tree.
+Advances in Neural Information Processing Systems 30 (NeurIPS), pp.3146-3154.
+
+Data Preparation
+Same as XGBoost: 70/15/15 train/validation/test split with scalers fit only on training data.
+No data leakage.
+
+Handling Class Imbalance
+LightGBM uses class_weight parameter set to 'balanced', which automatically adjusts weights
+inversely proportional to class frequencies. This achieves a similar effect to XGBoost's
+scale_pos_weight but is computed automatically by scikit-learn's LGBMClassifier wrapper.
+
+Hyperparameter Tuning
+Optuna was used with 50 trials on the validation set. Key hyperparameters tuned:
+- n_estimators: number of boosting iterations (100-500)
+- max_depth: maximum tree depth (3-9)
+- learning_rate: step size shrinkage (0.01-0.3, log scale)
+- subsample: row sampling rate (0.6-1.0)
+- colsample_bytree: feature sampling rate (0.6-1.0)
+- min_child_samples: minimum data in a leaf (5-50)
+- num_leaves: maximum number of leaves per tree (20-100)
+- reg_alpha: L1 regularization (0-2)
+- reg_lambda: L2 regularization (0-2)
+
+LightGBM vs XGBoost
+Both are gradient boosting algorithms but differ in tree construction:
+- XGBoost grows level-wise (all nodes at same depth first)
+- LightGBM grows leaf-wise (splits the leaf with maximum delta loss)
+Leaf-wise growth can overfit on small datasets but often achieves better results on larger
+datasets. LightGBM is also typically 2-5x faster to train.
+
+Explainability
+SHAP TreeExplainer is also applied to LightGBM for per-prediction feature importance,
+using the same methodology as XGBoost.
+"""
+    },
+    {
+        "title": "How the Autoencoder Model Was Built in FraudX",
+        "category": "model_building",
+        "content": """
+The Autoencoder is an unsupervised deep learning model used in FraudX Analyst as an
+anomaly detection approach to fraud detection.
+
+Algorithm Overview
+An autoencoder is a neural network trained to reconstruct its input. It consists of:
+- Encoder: compresses input into a lower-dimensional representation (bottleneck)
+- Decoder: reconstructs the original input from the compressed representation
+When trained only on normal transactions, the autoencoder learns to reconstruct normal
+patterns well. Fraudulent transactions, which differ from normal patterns, produce high
+reconstruction errors, indicating anomalies.
+
+Reference: Hinton, G.E. and Salakhutdinov, R.R. (2006). Reducing the Dimensionality of Data
+with Neural Networks. Science, 313(5786), pp.504-507.
+
+Network Architecture in FraudX
+Encoder: input_dim -> 32 neurons (ReLU) -> Dropout(0.2) -> 16 neurons (ReLU) -> 8 neurons (ReLU, bottleneck)
+Decoder: 8 neurons -> 16 neurons (ReLU) -> Dropout(0.2) -> 32 neurons (ReLU) -> input_dim (linear activation)
+Optimizer: Adam
+Loss function: Mean Squared Error (MSE)
+
+The bottleneck layer (8 neurons) forces the network to learn a compressed representation of
+the 30 input features, capturing only the most essential patterns of normal transactions.
+
+Data Preparation
+Same 70/15/15 split as other models. Critically, the autoencoder is trained ONLY on normal
+transactions from the training set. This ensures it learns exclusively what normal looks like.
+The validation set (containing both normal and fraud) is used for threshold optimization.
+
+Reconstruction Error Calculation
+FraudX uses a weighted combination of three error metrics:
+- Mean Squared Error (MSE): 50% weight - measures average squared difference
+- Mean Absolute Error (MAE): 30% weight - measures average absolute difference
+- Maximum Error: 20% weight - captures the worst feature reconstruction
+Combined Error = 0.5 * MSE + 0.3 * MAE + 0.2 * Max_Error
+
+Threshold Optimization
+The fraud/normal threshold is determined by testing 200 evenly spaced values between the
+minimum and maximum reconstruction errors on the validation set. The threshold that maximizes
+F1 score is selected, balancing precision and recall.
+
+Reference: An, J. and Cho, S. (2015). Variational Autoencoder Based Anomaly Detection Using
+Reconstruction Probability. Special Lecture on IE, 2(1), pp.1-18.
+
+Autoencoder vs Supervised Models
+Advantages: Does not require labeled fraud data for training, can detect novel fraud patterns
+not seen in training data.
+Disadvantages: Generally lower precision and recall than supervised models because it only
+learns what is normal, not what specifically looks like fraud. In FraudX, the autoencoder
+achieves high accuracy but lower F1 compared to XGBoost and LightGBM.
+"""
+    },
+    {
+        "title": "Confusion Matrix and Its Role in Fraud Detection",
+        "category": "metrics",
+        "content": """
+A confusion matrix is a table that summarizes how a classification model's predictions compare
+to the actual outcomes. For binary fraud detection, it has four components:
+
+True Positive (TP): Model correctly predicted FRAUD (actual was fraud)
+True Negative (TN): Model correctly predicted NORMAL (actual was normal)
+False Positive (FP): Model incorrectly predicted FRAUD (actual was normal) - a false alarm
+False Negative (FN): Model incorrectly predicted NORMAL (actual was fraud) - a missed fraud
+
+In FraudX Analyst's context:
+- TP: A fraudulent transaction was correctly caught. This protects the cardholder.
+- TN: A normal transaction was correctly allowed. The cardholder's purchase goes through.
+- FP: A normal transaction was wrongly flagged as fraud. This inconveniences the cardholder
+  and may block a legitimate purchase.
+- FN: A fraudulent transaction was missed. The cardholder suffers financial loss.
+
+Why FN is the Most Dangerous
+In fraud detection, false negatives (missed fraud) are generally more costly than false
+positives (false alarms). A missed fraud case means real money is stolen. A false alarm
+merely requires a phone call to verify. This is why FraudX uses scale_pos_weight and
+class_weight to penalize false negatives more heavily.
+
+All five evaluation metrics (Accuracy, Precision, Recall, F1, AUC-ROC) are derived from
+or related to the confusion matrix values.
+
+Reference: Stehman, S.V. (1997). Selecting and Interpreting Measures of Thematic
+Classification Accuracy. Remote Sensing of Environment, 62(1), pp.77-89.
+"""
+    },
+    {
+        "title": "Data Preprocessing and Leakage Prevention in FraudX",
+        "category": "model_building",
+        "content": """
+Data preprocessing is a critical step in building reliable fraud detection models. FraudX
+follows strict protocols to prevent data leakage, which would produce artificially inflated
+performance metrics that do not reflect real-world performance.
+
+Data Split Strategy
+The dataset (284,807 transactions) is split into three subsets:
+- Training set: 70% - used to fit the model parameters
+- Validation set: 15% - used for hyperparameter tuning (Optuna) and threshold optimization
+- Test set: 15% - used ONCE for final evaluation, never seen during any training or tuning
+
+Feature Scaling
+Standard scaling (z-score normalization) is applied to the Amount and Time features:
+z = (x - mean) / standard_deviation
+CRITICAL: The scaler is fit ONLY on the training set. The same fitted scaler is then applied
+to the validation and test sets. This prevents information from the validation/test sets
+from leaking into the training process.
+
+Reference: Kaufman, S. et al. (2012). Leakage in Data Mining: Formulation, Detection, and
+Avoidance. ACM Transactions on Knowledge Discovery from Data, 6(4), pp.1-21.
+
+PCA Features (V1-V28)
+The original dataset already has 28 features (V1-V28) that were PCA-transformed by the
+dataset creators to protect cardholder privacy. These features are already scaled and do
+not require additional preprocessing.
+
+Why Leakage Prevention Matters
+If a scaler is fit on the entire dataset (including test data), the model indirectly gains
+information about the test set's distribution. This leads to overly optimistic metrics during
+evaluation. FraudX's strict train-only scaling ensures that reported metrics accurately
+reflect how the model would perform on completely unseen data.
+"""
+    },
+    {
+        "title": "Optuna Hyperparameter Optimization in FraudX",
+        "category": "model_building",
+        "content": """
+Optuna is the hyperparameter optimization framework used in FraudX Analyst to find the best
+configuration for XGBoost and LightGBM models.
+
+What Is Hyperparameter Tuning?
+Machine learning models have two types of parameters:
+- Model parameters: learned from data during training (e.g., tree split values)
+- Hyperparameters: set before training and control the learning process (e.g., learning_rate,
+  max_depth, n_estimators)
+Choosing good hyperparameters significantly impacts model performance.
+
+How Optuna Works
+Optuna uses Bayesian optimization with a Tree-structured Parzen Estimator (TPE) to
+intelligently search the hyperparameter space. Unlike grid search (which tests every combination)
+or random search, Optuna learns from previous trials to focus on promising regions of the
+search space.
+
+FraudX Optuna Configuration
+- Number of trials: 50 per model
+- Optimization target: maximize F1 score on the validation set
+- Evaluation set: validation set ONLY (test set is never used during tuning)
+- Direction: maximize (higher F1 is better)
+
+After 50 trials, the best hyperparameter combination is used to train the final model on
+the training set. The final model is then evaluated once on the test set.
+
+Reference: Akiba, T. et al. (2019). Optuna: A Next-Generation Hyperparameter Optimization
+Framework. Proceedings of the 25th ACM SIGKDD International Conference on Knowledge Discovery
+and Data Mining, pp.2623-2631.
+"""
+    },
+    {
+        "title": "MLflow Experiment Tracking in FraudX",
+        "category": "model_building",
+        "content": """
+MLflow is the experiment tracking platform used in FraudX Analyst to log, compare, and
+manage machine learning model runs.
+
+What MLflow Tracks in FraudX
+For each model training run, MLflow records:
+- Parameters: all hyperparameters (learning_rate, max_depth, n_estimators, etc.)
+- Metrics: accuracy, precision, recall, F1 score, AUC-ROC, PR-AUC, training time
+- Artifacts: trained model files, SHAP plots, evaluation plots (confusion matrix, ROC curve,
+  precision-recall curve, feature importance)
+- Metadata: run ID, timestamp, experiment name
+
+FraudX Experiment Name
+All models are logged under the experiment name "FraudX-Models-Fixed", indicating these are
+the versions trained with proper data leakage prevention.
+
+Why MLflow Matters
+MLflow enables reproducibility and comparison across model versions. If a model is retrained
+with different hyperparameters or a new dataset, all results are tracked and can be compared
+side-by-side. This is essential for a production fraud detection system where model performance
+must be monitored over time.
+
+Reference: Zaharia, M. et al. (2018). Accelerating the Machine Learning Lifecycle with MLflow.
+IEEE Data Engineering Bulletin, 41(4), pp.39-45.
+"""
+    },
 ]

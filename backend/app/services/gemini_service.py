@@ -82,9 +82,11 @@ async def chat_response(
     user_message      : str,
     context_docs      : List[str],
     simulation_context: Optional[str] = None,
+    chat_history      : Optional[List[dict]] = None,
 ) -> str:
     """
     Generates a RAG chatbot response using retrieved knowledge base docs.
+    Includes conversation history for multi-turn context.
     """
     context_text = "\n\n".join(context_docs) if context_docs else "No specific context available."
 
@@ -92,17 +94,29 @@ async def chat_response(
     if simulation_context:
         simulation_text = f"\nRecent Simulation Result:\n{simulation_context}\n"
 
+    # Build conversation history string (last 6 messages for context window management)
+    history_text = ""
+    if chat_history:
+        recent = chat_history[-6:]  # Keep last 6 messages to avoid token limits
+        history_lines = []
+        for msg in recent:
+            role = "User" if msg.get("role") == "user" else "FraudX"
+            history_lines.append(f"{role}: {msg.get('content', '')}")
+        history_text = f"\nConversation History:\n" + "\n".join(history_lines) + "\n"
+
     prompt = f"""You are FraudX Assistant, an expert in credit card fraud detection and cybersecurity.
 Answer the user's question using the provided context. Be helpful, accurate, and concise.
 
 Knowledge Base Context:
 {context_text}
 {simulation_text}
+{history_text}
 User Question: {user_message}
 
 Guidelines:
 - Answer based on the context provided
 - If the question is about a specific simulation result, refer to it directly
+- If the user refers to something from previous messages, use the conversation history to understand the context
 - Keep answers clear and practical
 - If you don't know something, say so honestly
 - Use bullet points for lists, keep paragraphs short"""
